@@ -1,7 +1,9 @@
-import React from "react";
+import React, {useState,useEffect} from "react";
+
 import {
   Text,
-  Link,
+  View,
+  FlatList,
   HStack,
   Center,
   Heading,
@@ -10,9 +12,9 @@ import {
   NativeBaseProvider,
   extendTheme,
   VStack,
-  Code,
 } from "native-base";
-import NativeBaseIcon from "./components/NativeBaseIcon";
+import moment from 'moment';
+import { ItemClick } from "native-base/lib/typescript/components/composites/Typeahead/useTypeahead/types";
 
 // Define the config
 const config = {
@@ -24,48 +26,53 @@ const config = {
 export const theme = extendTheme({ config });
 
 export default function App() {
+  const [isLoading, setLoading] = useState(true);
+  const [data, setData] = useState([]);
+  
+  useEffect(() => {
+    fetch('https://www.gov.uk/bank-holidays.json')
+      .then((response) => response.json())      
+      .then(data=>{
+        setData(data);
+        let bankHolidays=data;
+        let england=bankHolidays["england-and-wales"].events;
+        var now=new Date();
+        var thisMonth = now.getUTCMonth() + 1; 
+        var thisDay = now.getUTCDate();
+        var thisYear = now.getUTCFullYear();
+        var thisDate = thisYear + '-' +thisMonth + '-' +thisDay;
+        england.map((item: { date: string; title: string })=>{
+          const [year, month, date] = item.date.split("-");
+          if(Date.parse(thisDate) <= Date.parse(item.date)){
+          return (
+            <View>
+              <Text>${date} / ${month} / ${year}</Text>
+              <Text>{item.title}</Text>
+            </View>
+          )
+        }}
+        )
+      })
+      .catch((error) => console.error(error))
+      .finally(() => setLoading(false));
+  }, []);
+  console.log(data); 
+ 
   return (
     <NativeBaseProvider>
-      <Center
-        _dark={{ bg: "blueGray.900" }}
-        _light={{ bg: "blueGray.50" }}
-        px={4}
-        flex={1}
-      >
-        <VStack space={5} alignItems="center">
-          <NativeBaseIcon />
-          <Heading size="lg">Welcome to NativeBase</Heading>
-          <HStack space={2} alignItems="center">
-            <Text>Edit</Text>
-            <Code>App.tsx</Code>
-            <Text>and save to reload.</Text>
-          </HStack>
-          <Link href="https://docs.nativebase.io" isExternal>
-            <Text color="primary.500" underline fontSize={"xl"}>
-              Learn NativeBase
-            </Text>
-          </Link>
-          <ToggleDarkMode />
+        <VStack alignItems="center" marginTop='20'>
+          <Heading size="lg">Upcoming UK Bank Holidays </Heading>
         </VStack>
-      </Center>
+      {isLoading ? <Text>Loading...</Text> : 
+      ( <View style={{ flex: 1, flexDirection: 'column', justifyContent:  'space-between'}}>
+          <Text style={{ fontSize: 14, color: 'blue', textAlign: 'center', paddingBottom: 10}}>Holidays:</Text>
+          <Text>{JSON.stringify(data,null,2)}</Text>
+          
+        </View>
+      )}
     </NativeBaseProvider>
   );
+  
+
 }
 
-// Color Switch Component
-function ToggleDarkMode() {
-  const { colorMode, toggleColorMode } = useColorMode();
-  return (
-    <HStack space={2} alignItems="center">
-      <Text>Dark</Text>
-      <Switch
-        isChecked={colorMode === "light" ? true : false}
-        onToggle={toggleColorMode}
-        aria-label={
-          colorMode === "light" ? "switch to dark mode" : "switch to light mode"
-        }
-      />
-      <Text>Light</Text>
-    </HStack>
-  );
-}
